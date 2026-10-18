@@ -6,6 +6,11 @@ Point it at the game folder, see every file the way the game would draw it, and 
 
 > This project is not affiliated with Digital Integration or the owners of Tornado. It contains no game data: you need your own copy of the game.
 
+
+## Screenshot
+![Screenshot](Screenshoot1.png)
+
+
 ## Features
 
 - **Folder explorer** with a file list (name, detected type, size, sortable columns) and a live preview.
