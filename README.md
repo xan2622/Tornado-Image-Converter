@@ -111,6 +111,15 @@ A 256-color palette (6-bit RGB) followed by 320 x 200 pixels stored as 4-bit del
 
 Triplets of 6-bit values (0 to 63) without header. A file covers the last colors of the palette: 144 colors for `PANEL_xx` (indices 112 to 255) and 80 for `KNEES_xx` (presumably indices 176 to 255, deduced from the size). The index range is always computed as 256 minus the number of colors in the file. The preview draws them in a 16-column grid where color *n* sits at row *n* / 16, column *n* % 16.
 
+## Download
+
+Get the latest build from the [Releases page](https://github.com/xan2622/Tornado-Image-Converter/releases). Two executables are provided for Windows x64:
+
+- `TornadoImageConverter-<version>-win-x64.exe`: self-contained, nothing to install (about 80 MB).
+- `TornadoImageConverter-<version>-win-x64-framework-dependent.exe`: smaller (about 25 MB), requires the .NET 10 Desktop Runtime.
+
+Download one of them and run it. The executables are not code-signed, so your browser or Windows SmartScreen may show a warning the first time.
+
 ## Requirements
 
 - Windows 10 (version 2004, build 19041) or later, Windows 11 included

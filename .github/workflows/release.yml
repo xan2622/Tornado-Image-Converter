@@ -1,0 +1,84 @@
+# Builds the Windows executables and publishes them as a GitHub Release.
+#
+# Two ways to run it:
+#   - Actions tab > Release > Run workflow: version taken from the input, or from <Version> in the .csproj if left empty.
+#     The tag vX.Y.Z is created on the selected branch and the release is published.
+#   - git tag v1.0.0 && git push origin v1.0.0: the release is published for that tag.
+#
+# A release that already exists is never overwritten: the run fails, bump the version instead.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, for example 1.0.1 (empty: <Version> of the .csproj)'
+        required: false
+        type: string
+
+permissions:
+  contents: write  # needed to create the tag and the release and to upload its files
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Determine version
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $project = 'src/TornadoImageConverter/TornadoImageConverter.csproj'
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          } elseif ($env:INPUT_VERSION) {
+            $version = $env:INPUT_VERSION.Trim().TrimStart('v')
+          } else {
+            $version = ([xml](Get-Content $project)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          }
+          if (-not $version) { throw 'No version found.' }
+          "VERSION=$version" >> $env:GITHUB_ENV
+          Write-Host "Version: $version"
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          $project = 'src/TornadoImageConverter'
+          $common = @('-c', 'Release', '-r', 'win-x64', '-p:PublishSingleFile=true', '-p:DebugType=None', "-p:Version=$env:VERSION")
+
+          # Self-contained: nothing to install, bigger file
+          dotnet publish $project @common --self-contained true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out/self-contained
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # Framework-dependent: needs the .NET 10 Desktop Runtime, smaller file
+          dotnet publish $project @common --self-contained false -o out/framework-dependent
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # Both builds produce TornadoImageConverter.exe: rename them so they can sit side by side in the release
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item out/self-contained/TornadoImageConverter.exe "dist/TornadoImageConverter-$env:VERSION-win-x64.exe"
+          Copy-Item out/framework-dependent/TornadoImageConverter.exe "dist/TornadoImageConverter-$env:VERSION-win-x64-framework-dependent.exe"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: TornadoImageConverter
+          path: dist/*.exe
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v$env:VERSION"
+          $files = Get-ChildItem dist/*.exe | ForEach-Object { $_.FullName }
+          gh release create $tag @files --title $tag --generate-notes --target $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
