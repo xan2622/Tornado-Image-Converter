@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+*.user
+
+# Temporary working folders and game files (not redistributed)
+_tmp_fnt/
+_tmp_test/
+output/
+fichiers BT2/
+fichiers PNG/
+publish/
